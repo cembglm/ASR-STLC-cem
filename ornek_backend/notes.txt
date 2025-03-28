@@ -1,0 +1,133 @@
+Aşağıda, mevcut kodunuzu belirttiğiniz dizin yapısına (backend klasörü altında) SOLID prensiplerine uygun şekilde nasıl bölebileceğinizi adım adım açıklayacağım. Böylece her modülün tek bir sorumluluğu olacak ve kodunuz daha kolay bakımı, genişletilmesi ve test edilmesi mümkün hale gelecektir.
+
+---
+
+## 1. Üst Düzey Dosyalar
+
+- **app.py:**  
+  - **Amaç:** FastAPI uygulamasının ana giriş noktası.  
+  - **İçerik:** Route’lar, global middleware’ler ve uygulamanın başlangıç yapılandırması.  
+  - **Konum:** `backend/app.py`
+
+- **config.py:**  
+  - **Amaç:** Uygulamanın genel konfigürasyon ayarları, environment değişkenleri (örneğin LM Studio URL’si, model identifier, MongoDB bağlantısı vs.).  
+  - **Konum:** `backend/config.py`
+
+- **requirements.txt:**  
+  - **Amaç:** Projede kullanılan tüm kütüphanelerin listesi.  
+  - **Konum:** `backend/requirements.txt`
+
+---
+
+## 2. Core Katmanı
+
+Bu katman, sistemin temel altyapı işlemlerini yönetir. Her dosya, belirli bir işleve odaklanır (tek sorumluluk prensibi).
+
+- **database.py:**  
+  - **Amaç:** MongoDB bağlantısı, CRUD işlemleri ve diğer veritabanı işlemleri.  
+  - **Konum:** `backend/core/database.py`
+
+- **file_handler.py:**  
+  - **Amaç:** Farklı dosya formatlarından (PDF, DOCX, TXT) metin çıkarım işlemleri, sanitizasyon ve temel giriş doğrulama.  
+  - **Konum:** `backend/core/file_handler.py`
+
+- **model_client.py:**  
+  - **Amaç:** LLM çağrıları, model API entegrasyonları, retry ve timeout mekanizmaları gibi model ile ilgili işlemler.  
+  - **Konum:** `backend/core/model_client.py`
+
+- **prompt_manager.py:**  
+  - **Amaç:** Her STLC adımına özel prompt, query ve diğer yapılandırma verilerinin yönetimi (örneğin, system_message.txt’i okuma, dinamik prompt oluşturma vs.).  
+  - **Konum:** `backend/core/prompt_manager.py`
+
+> **Not:** Bu modüller, farklı modüllerin ortak ihtiyaç duyduğu altyapı işlevlerini merkezi bir noktada toplar; böylece tekrar yazım azaltılmış olur.
+
+---
+
+## 3. Pipeline Katmanı
+
+Pipeline, birden fazla STLC adımını ardışık (veya paralel) şekilde çalıştırmayı yönetir. Bu katman, UI’den gelen seçimlere göre hangi adımların çalıştırılacağını belirler ve her adımın çıktısını toplar.
+
+- **pipeline_controller.py:**  
+  - **Amaç:** UI’den gelen seçimleri (checkbox’lar vb.) alarak, hangi STLC adımlarının çalıştırılacağına karar verir ve sıralar.  
+  - **Konum:** `backend/pipeline/pipeline_controller.py`
+
+- **pipeline_executor.py:**  
+  - **Amaç:** Belirlenen adımları (örneğin, test planlama, test case generation, test reporting) sırasıyla çağırır. Her adım, `stlc` klasöründeki ilgili modüllerin `run_step` fonksiyonunu kullanarak çalışır.  
+  - **Konum:** `backend/pipeline/pipeline_executor.py`
+
+---
+
+## 4. STLC Katmanı
+
+Her STLC adımı için ayrı bir dosya olacak şekilde tasarlayın. Her adımın dosyası, kendi iş mantığını içeren ve ortak bir arayüz (örneğin, `run_step(input_data)`) sunan modüldür. Böylece üst katmanlar bu adımları bağımsız olarak çağırabilir.
+
+Örneğin:
+
+- **code_review.py:**  
+  - **Amaç:** Code Review aşamasına özgü işlemleri yönetir.  
+  - **Konum:** `backend/stlc/code_review.py`
+  
+- **requirement_analysis.py:**  
+  - **Amaç:** Gereksinim analizi adımını yönetir.  
+  - **Konum:** `backend/stlc/requirement_analysis.py`
+  
+- **test_planning.py:**  
+  - **Amaç:** Test planlamaya ilişkin işlemleri içerir.  
+  - **Konum:** `backend/stlc/test_planning.py`
+
+- **test_case_generation.py, test_case_optimization.py, test_code_generation.py, environment_setup.py, test_execution.py, test_reporting.py, test_scenario_generation.py, test_scenario_optimization.py, test_closure.py:**  
+  - **Amaç:** Her biri kendi STLC aşamasıyla ilgili iş mantığını sunar.  
+  - **Konum:** `backend/stlc/`
+
+> **Not:** Her STLC modülü ortak olarak `run_step(input_data)` fonksiyonu sunmalıdır. Böylece pipeline executor bu fonksiyonları çağırarak adımlar arasında veri akışını yönetebilir.
+
+---
+
+## 5. Utils Katmanı
+
+Yardımcı ve ortak fonksiyonların toplandığı katmandır. Bu modüller, diğer modüllerin bağımlı olduğu yardımcı işlevleri içerir.
+
+- **text_splitter.py:**  
+  - **Amaç:** Büyük metinlerin, LLM token limitine uygun şekilde parçalara bölünmesini sağlar.  
+  - **Konum:** `backend/utils/text_splitter.py`
+
+- **validation.py:**  
+  - **Amaç:** LLM çıktılarının belirli bir formatta olup olmadığını kontrol eden validasyon fonksiyonlarını içerir.  
+  - **Konum:** `backend/utils/validation.py`
+
+---
+
+## 6. Örnek Dağılım ve Bağımlılık İlişkileri
+
+Aşağıdaki tablo, hangi modülün neyi kapsadığını özetler:
+
+| Klasör/Dosya                        | Sorumluluk                                                       | Bağımlılıklar / İlişkiler                                |
+|-------------------------------------|------------------------------------------------------------------|----------------------------------------------------------|
+| **app.py**                          | Uygulamanın giriş noktası, route tanımlamaları                   | Tüm alt modüller; pipeline, core ve stlc modüllerine çağrı   |
+| **config.py**                       | Genel yapılandırma ayarları                                      | -                                                        |
+| **core/database.py**                | Veritabanı işlemleri                                             | config.py (env ayarları)                                 |
+| **core/file_handler.py**            | Dosya okuma, metin çıkarımı, sanitizasyon                         | Standart kütüphaneler (os, io, docx, PyPDF2)              |
+| **core/model_client.py**            | LLM çağrıları, retry/timeout mekanizmaları                        | LangChain, config.py                                     |
+| **core/prompt_manager.py**          | Prompt ve query yapılandırmaları                                 | Dosya okuma, veritabanı işlemleri                        |
+| **pipeline/pipeline_controller.py** | UI’den gelen adım seçimlerini işleme                              | stlc modülleri, core prompt_manager                      |
+| **pipeline/pipeline_executor.py**   | Seçilen adımları sırayla çalıştırma, sonuçları toplama             | stlc modüllerinin run_step fonksiyonları                 |
+| **stlc/\***                         | Her STLC adımının iş mantığı (örneğin, test planlama, code review)   | Ortak arayüz (run_step); core modüller (dosya işleme vb.) |
+| **utils/text_splitter.py**          | Metin parçalama işlemleri                                         | count_tokens, LLM_TOKEN_LIMIT gibi değerler              |
+| **utils/validation.py**             | LLM çıktısı validasyonu                                            | JSON schema veya benzeri validasyon yöntemleri           |
+
+---
+
+## 7. Sonuç
+
+Bu yapı:
+
+- **Tek Sorumluluk Prensibi (SRP):** Her modül yalnızca belirli bir işi yapacak şekilde ayrılmıştır.
+- **Bağımlılıkların Azaltılması:** Üst seviye modüller, alt modüllerin detaylarına bağımlı olmadan, ortak arayüzler üzerinden iletişim kurar.
+- **Genişletilebilirlik:** Yeni STLC adımları eklemek için yalnızca `backend/stlc/` klasörüne yeni bir dosya eklemek yeterlidir.
+- **Bakım ve Test Kolaylığı:** Her modülün sorumluluğu net olduğundan, ayrı ayrı test edilip, gerektiğinde kolayca güncellenebilir.
+
+Bu şekilde bölünmüş bir yapı, belirttiğiniz dizin yapısına uygun olarak, SOLID prensiplerine bağlı kalarak uygulamanın bakımını, genişletilmesini ve anlaşılmasını kolaylaştıracaktır.
+
+---
+
+Bu dağılımı uygulayarak kodunuzu repoya uygun şekilde organize edebilir, her modülün kendi sorumluluğuna odaklanmasını sağlayabilirsiniz.

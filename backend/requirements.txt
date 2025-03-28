@@ -1,0 +1,12 @@
+# requirements.txt
+# ----------------
+# Uygulamada kullanılması planlanan temel kütüphaneler.
+# İhtiyaca göre bu listeyi genişletebilirsiniz.
+
+fastapi
+uvicorn
+pymongo
+langchain
+PyPDF2
+python-docx
+python-dotenv
