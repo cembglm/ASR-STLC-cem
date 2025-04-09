@@ -6,6 +6,7 @@ import TestScenarioGenerationForm from './processes/TestScenarioGenerationForm';
 import TestScenarioOptimizationForm from './processes/TestScenarioOptimizationForm';
 import TestCaseGenerationForm from './processes/TestCaseGenerationForm';
 import TestCaseOptimizationForm from './processes/TestCaseOptimizationForm';
+import CodeReviewForm from './processes/CodeReviewForm';
 
 const tabs = [
   { id: 'description', name: 'Description' },
@@ -17,6 +18,7 @@ const tabs = [
 
 // Process ID'lerine göre form componentlerini eşleştir
 const ProcessFormComponents = {
+  'code-review': CodeReviewForm,
   'test-scenario-generation': TestScenarioGenerationForm,
   'test-scenario-optimization': TestScenarioOptimizationForm,
   'test-case-generation': TestCaseGenerationForm,

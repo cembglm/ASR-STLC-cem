@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
 import PropTypes from 'prop-types';
+import processService from '../../services/processService';
 
 export default function TestScenarioGenerationForm({ onGeneratePrompt, process }) {
   const [processTitle, setProcessTitle] = useState('');
@@ -7,20 +9,17 @@ export default function TestScenarioGenerationForm({ onGeneratePrompt, process }
   const [testType, setTestType] = useState('');
   const [model, setModel] = useState('');
   const [availableTestTypes, setAvailableTestTypes] = useState([]);
-  const [scoringElements, setScoringElements] = useState({
-    testScenarioQuality: false,
-    outputAlignment: false,
-    consistency: false,
-    detailSpecificity: false,
-    professionalStandard: false
-  });
-  const [instructionElements, setInstructionElements] = useState({
-    scenarioContext: false,
-    relevanceCompleteness: false,
-    consistencyAlignment: false,
-    detailVerification: false,
-    professionalFormatting: false
-  });
+  const [scoringElements, setScoringElements] = useState({});
+  const [scoringElementDetails, setScoringElementDetails] = useState({});
+  const [instructionElements, setInstructionElements] = useState({});
+  const [instructionElementDetails, setInstructionElementDetails] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [activeTooltip, setActiveTooltip] = useState(null);
+  const [testPrompt, setTestPrompt] = useState('');
+  const [isEditingPrompt, setIsEditingPrompt] = useState(false);
+  const [editedPrompt, setEditedPrompt] = useState('');
+
 
   const categoryNames = [
     'Select Test Category',
@@ -51,11 +50,74 @@ export default function TestScenarioGenerationForm({ onGeneratePrompt, process }
       const filteredTests = allTestTypes.filter(test => test.category === testCategory);
       setAvailableTestTypes(filteredTests);
       setTestType('');
+      // Reset scoring elements when category changes
+      setScoringElements({});
+      setScoringElementDetails({});
     } else {
       setAvailableTestTypes([]);
       setTestType('');
     }
   }, [testCategory]);
+
+  useEffect(() => {
+    async function fetchTestTypeData() {
+      if (!testType) {
+        setScoringElements({});
+        setScoringElementDetails({});
+        setInstructionElements({});
+        setInstructionElementDetails({});
+        setTestPrompt('');
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await processService.getTestTypeDetails(testType);
+        
+        // Set test prompt
+        setTestPrompt(response.test_prompt || '');
+
+        // Set scoring elements
+        const scoringData = response.test_scoring_elements_and_prompts || {};
+        setScoringElements(Object.keys(scoringData).reduce((acc, key) => ({
+          ...acc,
+          [key]: false
+        }), {}));
+        setScoringElementDetails(scoringData);
+
+        // Set instruction elements
+        const instructionData = response.test_instruction_elements_and_prompts || {};
+        setInstructionElements(Object.keys(instructionData).reduce((acc, key) => ({
+          ...acc,
+          [key]: false
+        }), {}));
+        setInstructionElementDetails(instructionData);
+      } catch (err) {
+        setError(err.message);
+        setScoringElements({});
+        setScoringElementDetails({});
+        setInstructionElementDetails({});
+        setTestPrompt('');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchTestTypeData();
+  }, [testType]);
+
+  const handleSavePrompt = () => {
+    setTestPrompt(editedPrompt);
+    setIsEditingPrompt(false);
+    toast.success('Prompt saved successfully!');
+  };
+  
+  const handleCancelEdit = () => {
+    setIsEditingPrompt(false);
+    setEditedPrompt('');
+    toast('Edit cancelled.', { icon: '🛑' });
+  };  
 
   const handleScoringElementChange = (element) => {
     setScoringElements(prev => ({
@@ -148,52 +210,162 @@ export default function TestScenarioGenerationForm({ onGeneratePrompt, process }
           </select>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-lg font-medium text-gray-900">Test Scoring Elements</h3>
-            <div className="mt-4 space-y-2">
-              {[
-                { id: 'testScenarioQuality', label: 'Test Scenario Quality Score' },
-                { id: 'outputAlignment', label: 'Output Alignment Score' },
-                { id: 'consistency', label: 'Consistency Score' },
-                { id: 'detailSpecificity', label: 'Detail and Specificity Score' },
-                { id: 'professionalStandard', label: 'Professional Standard Score' }
-              ].map(element => (
-                <label key={element.id} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={scoringElements[element.id]}
-                    onChange={() => handleScoringElementChange(element.id)}
-                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span className="ml-2 text-sm text-gray-600">{element.label}</span>
-                </label>
-              ))}
+        {/* Display Test Prompt */}
+        {/* {testPrompt && (
+          <div className="mt-4">
+            <h3 className="text-lg font-medium text-gray-900">Selected Test Type's Base Prompt</h3>
+            <div className="mt-2 p-4 bg-gray-50 rounded-md">
+              <p className="text-sm text-gray-600">{testPrompt}</p>
             </div>
+          </div>
+        )} */}
+        {/* Editable Test Prompt */}
+        {testPrompt && (
+          <div className="mt-4">
+            <h3 className="text-lg font-medium text-gray-900">Selected Test Type's Base Prompt</h3>
+            {isEditingPrompt ? (
+              <div className="mt-2 p-4 bg-gray-50 rounded-md space-y-3">
+                <textarea
+                  className="w-full p-2 border border-gray-300 rounded-md text-sm text-gray-700"
+                  value={editedPrompt}
+                  onChange={(e) => setEditedPrompt(e.target.value)}
+                  rows={10}
+                />
+                <div className="flex space-x-2">
+                  <button
+                    onClick={handleSavePrompt}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-2 p-4 bg-gray-50 rounded-md space-y-3">
+                <p className="text-sm text-gray-600 whitespace-pre-wrap">{testPrompt}</p>
+                <button
+                  onClick={() => {
+                    setIsEditingPrompt(true);
+                    setEditedPrompt(testPrompt);
+                  }}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                >
+                  Edit
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+
+        {/* Scoring Elements Section */}
+        <div className="space-y-4">
+          {scoringElementDetails && Object.keys(scoringElementDetails).length > 0 && (
+            <div>
+              <h3 className="text-lg font-medium text-gray-900">Test Scoring Elements</h3>
+              {isLoading ? (
+                <div className="mt-4 text-gray-600">Loading scoring elements...</div>
+              ) : error ? (
+                <div className="mt-4 text-red-600">{error}</div>
+              ) : Object.keys(scoringElements).length > 0 ? (
+                <div className="mt-4 space-y-2">
+                  {Object.entries(scoringElements).map(([element, checked]) => (
+                    <div key={element} className="relative">
+                      <label 
+                        className="flex items-center group"
+                        onMouseEnter={() => setActiveTooltip(element)}
+                        onMouseLeave={() => setActiveTooltip(null)}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => handleScoringElementChange(element)}
+                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-600">{element}</span>
+                        {activeTooltip === element && scoringElementDetails[element] && (
+                          <div className="absolute left-0 bottom-full mb-2 w-64 p-2 bg-gray-800 text-white text-sm rounded shadow-lg">
+                            {scoringElementDetails[element]}
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-4 text-gray-600">No scoring elements available for the selected test type.</div>
+              )}
+            </div>
+          )}
+
+          {/* New Section: Scoring Elements Details */}
+          {/* {Object.keys(scoringElementDetails).length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-lg font-medium text-gray-900">Scoring Elements Details</h3>
+              <div className="mt-2 p-4 bg-gray-50 rounded-md">
+                {Object.entries(scoringElementDetails).map(([key, description]) => (
+                  <p key={key} className="text-sm text-gray-600"><strong>{key}:</strong> {description}</p>
+                ))}
+              </div>
+            </div>
+          )} */}
+
+          {/* Instruction Elements Section */}
+          <div>
+            {testType ? (
+              instructionElementDetails && Object.keys(instructionElementDetails).length > 0 ? (
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">Test Instruction Elements</h3>
+                <div className="mt-4 space-y-2">
+                  {Object.entries(instructionElements).map(([element, checked]) => (
+                    <div key={element} className="relative">
+                      <label 
+                        className="flex items-center group"
+                        onMouseEnter={() => setActiveTooltip(element)}
+                        onMouseLeave={() => setActiveTooltip(null)}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => handleInstructionElementChange(element)}
+                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-600">{element}</span>
+                        {activeTooltip === element && instructionElementDetails[element] && (
+                          <div className="absolute left-0 bottom-full mb-2 w-64 p-2 bg-gray-800 text-white text-sm rounded shadow-lg">
+                            {instructionElementDetails[element]}
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              ) : (
+                <div className="mt-4 text-gray-600">No instruction elements available for the selected test type.</div>
+              )
+            ) : null}
           </div>
 
-          <div>
-            <h3 className="text-lg font-medium text-gray-900">Test Instruction Elements</h3>
-            <div className="mt-4 space-y-2">
-              {[
-                { id: 'scenarioContext', label: 'Scenario Context Verification' },
-                { id: 'relevanceCompleteness', label: 'Relevance and Completeness Check' },
-                { id: 'consistencyAlignment', label: 'Consistency and Alignment Verification' },
-                { id: 'detailVerification', label: 'Detail Verification' },
-                { id: 'professionalFormatting', label: 'Professional and Structured Formatting' }
-              ].map(element => (
-                <label key={element.id} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={instructionElements[element.id]}
-                    onChange={() => handleInstructionElementChange(element.id)}
-                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span className="ml-2 text-sm text-gray-600">{element.label}</span>
-                </label>
-              ))}
+
+
+          {/* New Section: Instruction Elements Details */}
+          {/* {Object.keys(instructionElementDetails).length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-lg font-medium text-gray-900">Instruction Elements Details</h3>
+              <div className="mt-2 p-4 bg-gray-50 rounded-md">
+                {Object.entries(instructionElementDetails).map(([key, description]) => (
+                  <p key={key} className="text-sm text-gray-600"><strong>{key}:</strong> {description}</p>
+                ))}
+              </div>
             </div>
-          </div>
+          )} */}
         </div>
 
         <div className="pt-4">

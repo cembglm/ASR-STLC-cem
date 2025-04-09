@@ -1,5 +1,5 @@
 from utils.file_handler import FileHandler
-from utils.llm_client import LLMClient
+from utils.model_client import LLMClient
 from utils.text_processor import TextProcessor
 import logging
 import os
@@ -36,14 +36,14 @@ Code to review:
 
     def __init__(self):
         self.file_handler = FileHandler()
-        self.llm_client = LLMClient()
+        self.model_client = LLMClient()
         self.text_processor = TextProcessor()
         self.logger = logging.getLogger(__name__)
         self.logger.debug("ReviewService initialized")
 
-    async def run_code_review(self, files):
+    async def run_code_review(self, files, model_key=None):
         try:
-            self.logger.debug(f"Starting code review for {len(files)} files")
+            self.logger.debug(f"Starting code review for {len(files)} files with model: {model_key}")
             
             if not files:
                 raise ValueError("No files provided for review")
@@ -53,6 +53,16 @@ Code to review:
             
             if not file_paths:
                 raise ValueError("Failed to save uploaded files")
+            
+            # Model seçimi için LLMClient oluştur
+            model_client = LLMClient()
+            self.logger.info(f"##### Model key: {model_key}")
+            if model_key:
+                model_name = model_client.get_model_identifier(model_key)
+                model_client = LLMClient(model_name)
+                self.logger.info(f"Using model: {model_name} for review")
+            else:
+                self.logger.info("No model specified, using default model")
                 
             combined_content = self._combine_file_contents(file_paths)
             self.logger.debug("Files combined successfully")
@@ -69,13 +79,13 @@ Code to review:
                 all_reviews = []
                 for i, chunk in enumerate(chunks):
                     self.logger.debug(f"Processing chunk {i+1}/{len(chunks)}")
-                    review = await self.llm_client.generate_response(chunk)
+                    review = await model_client.generate_response(chunk)
                     if review:
                         all_reviews.append(review)
                 final_review = self._combine_reviews(all_reviews)
             else:
                 self.logger.debug(f"Using single review. Token count: {len(review_prompt.split())}")
-                final_review = await self.llm_client.generate_response(review_prompt)
+                final_review = await model_client.generate_response(review_prompt)
             
             if not final_review:
                 raise ValueError("Failed to generate code review")

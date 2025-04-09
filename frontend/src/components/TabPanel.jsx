@@ -8,6 +8,7 @@ import TestScenarioGenerationForm from './processes/TestScenarioGenerationForm';
 import TestScenarioOptimizationForm from './processes/TestScenarioOptimizationForm';
 import TestCaseGenerationForm from './processes/TestCaseGenerationForm';
 import TestCaseOptimizationForm from './processes/TestCaseOptimizationForm';
+import CodeReviewForm from './processes/CodeReviewForm';
 
 export default function TabPanel({
   processes,
@@ -68,6 +69,7 @@ export default function TabPanel({
   ];
 
   const ProcessFormComponents = {
+    'code-review': CodeReviewForm,
     'test-scenario-generation': TestScenarioGenerationForm,
     'test-scenario-optimization': TestScenarioOptimizationForm,
     'test-case-generation': TestCaseGenerationForm,

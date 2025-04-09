@@ -1,5 +1,5 @@
-import { PROCESS_TYPES } from '../constants/processTypes';
-
+// This file contains the processes data for the testing automation tool.
+// Each process includes an ID, name, details, inputs, and output.
 export const processes = [
   {
     id: 'code-review',

@@ -73,10 +73,14 @@ function AppContents() {
 	};
 
 	const handlePromptUpdate = (processId, newPrompt) => {
-		console.log(`[App] Prompt updated for process ${processId}: ${newPrompt}`);
+		console.log(`[App] Prompt updated for process ${processId}:`, newPrompt);
+		
+		// Ensure consistent structure
+		const updatedPrompt = typeof newPrompt === 'object' ? newPrompt : { content: newPrompt };
+		
 		setProcessPrompts(prev => ({
 			...prev,
-			[processId]: newPrompt
+			[processId]: updatedPrompt
 		}));
 	};
 
@@ -311,23 +315,34 @@ function AppContents() {
 			let result;
 			if (processId === 'code-review') {
 				console.log('[App] Running code review');
-				await dispatch(runCodeReview(files)).unwrap();
-        
-				// Redux state'ini kullan
-				if (error) {
-					throw new Error(error);
-				}
 				
-				setOutputs(prev => ({
-					...prev,
-					[processId]: {
-						content: reviews.join('\n\n'),
-						status: status === 'succeeded' ? 'completed' : 'error',
-						processType: 'Code Review',
-						processId,
-						timestamp: new Date().toISOString()
+					// Access model from processPrompts state which is updated by the form
+					const options = processPrompts[processId] || {};
+					
+					// Check if options is an object with a model property or if it's a string
+					const model = typeof options === 'object' && options.model 
+						? options.model 
+						: (typeof options === 'string' ? options : 'default model');
+					
+					console.log(`[App] Using model for code review: ${model}`); // Add this log
+					window.alert(`Selected model for Code Review: ${model}`);
+					await dispatch(runCodeReview({files, model})).unwrap();
+					
+					// Redux state'ini kullan
+					if (error) {
+							throw new Error(error);
 					}
-				}));
+					
+					setOutputs(prev => ({
+							...prev,
+							[processId]: {
+									content: reviews.join('\n\n'),
+									status: status === 'succeeded' ? 'completed' : 'error',
+									processType: 'Code Review',
+									processId,
+									timestamp: new Date().toISOString()
+							}
+					}));
 			} else if (processId === 'test-planning') {
 				console.log('[App] Running test planning');
 				const formData = new FormData();

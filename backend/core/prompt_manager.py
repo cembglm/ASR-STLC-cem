@@ -23,7 +23,7 @@ def get_prompts_for_step(step_name: str):
     
     try:
         db = get_db()
-        collection = db["stlc_prompts"]  # Koleksiyon adı
+        collection = db["test_scenario_generation_prompts"]  # Koleksiyon adı
         document = collection.find_one({"step": step_name})
         
         if document:

@@ -1,7 +1,5 @@
 import axios from 'axios';
-import { PROCESS_TYPES } from '../constants/processTypes';
 
-const API_URL = 'http://localhost:8000/api';
 const API_BASE_URL = 'http://localhost:8000/api/processes';
 
 export const processService = {
@@ -14,7 +12,7 @@ export const processService = {
     try {
       console.log(`İstek gönderiliyor: ${processType} süreci için`);
       const response = await axios.post(
-        `${API_URL}/processes/${processType}/run`,
+        `${API_BASE_URL}/processes/${processType}/run`,
         formData,
         {
           headers: {
@@ -29,14 +27,18 @@ export const processService = {
     }
   },
 
-  async runCodeReview(files) {
-    console.log('[ProcessService] Running code review');
+  async runCodeReview(files, model = null) {
+    console.log('[ProcessService] Running code review with model:', model);
     
     const formData = new FormData();
     files.forEach(fileInfo => {
       const file = fileInfo.file || fileInfo;
       formData.append('files', file);
     });
+    
+    if (model) {
+      formData.append('model', model);
+    }
 
     try {
       const response = await fetch(`${API_BASE_URL}/code-review/run`, {
@@ -81,7 +83,7 @@ export const processService = {
     try {
       console.log("İstek gönderiliyor: Gereksinim analizi süreci için");
       const response = await axios.post(
-        `${API_URL}/processes/requirement_analysis/run`,
+        `${API_BASE_URL}/processes/requirement_analysis/run`,
         formData,
         {
           headers: {
@@ -99,30 +101,13 @@ export const processService = {
   },
 
   async runTestScenarioGeneration(config) {
-    const formData = new FormData();
-    
-    // Dosyaları ekle
-    if (config.files) {
-        config.files.forEach(file => {
-            formData.append('files', file);
-        });
-    }
-    
-    // Form verilerini ekle
-    formData.append('test_category', config.testCategory);
-    formData.append('test_type', config.testType);
-    formData.append('model', config.model);
-    formData.append('scoring_elements', JSON.stringify(config.scoringElements));
-    formData.append('instruction_elements', JSON.stringify(config.instructionElements));
-
     try {
-        console.log('Running test scenario generation...');
         const response = await axios.post(
-            `${API_URL}/processes/test-scenario-generation/run`,
-            formData,
+            `/api/processes/test-scenario-generation/run`, // Use absolute path with /api prefix
+            config,
             {
                 headers: {
-                    'Content-Type': 'multipart/form-data',
+                    'Content-Type': 'application/json',
                 },
             }
         );
@@ -135,7 +120,7 @@ export const processService = {
   async generatePrompt(formData) {
     try {
         const response = await axios.post(
-            `${API_URL}/processes/test-scenario-generation/generate-prompt`,
+            `${API_BASE_URL}/processes/test-scenario-generation/generate-prompt`,
             formData,
             {
                 headers: {
@@ -153,5 +138,32 @@ export const processService = {
         console.error('Error in generatePrompt:', error);
         throw error;
     }
+  },
+
+  async getTestTypeDetails(testType) {
+    try {
+      console.log('Fetching test type details for:', testType);
+      const response = await axios.get(
+        `${API_BASE_URL}/test-scenario-generation/test-type/${encodeURIComponent(testType)}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      console.log('Received test type details:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching test type details:', error);
+      if (error.response?.status === 404) {
+        return {
+          scoring_elements: {},
+          instruction_elements: {}
+        };
+      }
+      throw new Error(error.response?.data?.detail || 'Failed to fetch test type details');
+    }
   }
 };
+
+export default processService;

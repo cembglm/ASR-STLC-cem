@@ -9,7 +9,7 @@ import os
 from core.file_handler import extract_text
 from utils.text_splitter import split_text_into_chunks
 from core.prompt_manager import get_prompts_for_step
-from core.model_client import get_llm_instance
+from backend.utils.model_client import get_llm_instance
 from utils.validation import validate_output_format
 from fastapi import UploadFile
 from io import BytesIO

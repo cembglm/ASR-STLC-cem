@@ -5,7 +5,7 @@ STLC'nin Test Scenario Generation adımına ait işlemleri yönetir.
 """
 
 import logging
-from core.model_client import get_llm_instance
+from utils.model_client import get_llm_instance
 from core.prompt_manager import get_prompts_for_step
 from utils.validation import validate_output_format
 
@@ -92,6 +92,7 @@ async def run_step(input_data):
         full_prompt = prompt_response["prompt"] + f"\nInput Content:\n{file_content}"
 
         # LLM modelini al ve çalıştır
+        #burası değiştirilecek
         llm = get_llm_instance(model_name=model_name, temperature=0.7)
         response = llm.invoke(full_prompt)
 
