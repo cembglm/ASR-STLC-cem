@@ -45,7 +45,7 @@ async def get_test_type_details(test_type: str):
     try:
         print(f"Fetching details for test type: {test_type}")
         db = await get_database()
-        test_collection = db["test_type"]
+        test_collection = db["test_scenario_generation_prompt"]
         
         # Find document matching the test type
         doc = await test_collection.find_one({"test_name": test_type})

@@ -19,6 +19,7 @@ function AppContents() {
 	const [selectedProcesses, setSelectedProcesses] = useState(new Set());
 	const [processOrigins, setProcessOrigins] = useState({}); // { processId: 'manual' | 'auto' }
 	const [processFiles, setProcessFiles] = useState({});
+	const [aiModels, setAIModels] = useState({});  // New state for AI models
 	const [processPrompts, setProcessPrompts] = useState({});
 	const [output, setOutput] = useState(null);
 	const [pipelineStatus, setPipelineStatus] = useState({});
@@ -81,6 +82,14 @@ function AppContents() {
 		setProcessPrompts(prev => ({
 			...prev,
 			[processId]: updatedPrompt
+		}));
+	};
+
+	const handleAIModelUpdate = (processId, model) => {
+		console.log(`[App] AI Model updated for process ${processId}:`, model);
+		setAIModels(prev => ({
+			...prev,
+			[processId]: model
 		}));
 	};
 
@@ -314,35 +323,29 @@ function AppContents() {
 	
 			let result;
 			if (processId === 'code-review') {
-				console.log('[App] Running code review');
+				console.log('[App] Running code review with ai model', aiModels);
 				
-					// Access model from processPrompts state which is updated by the form
-					const options = processPrompts[processId] || {};
-					
-					// Check if options is an object with a model property or if it's a string
-					const model = typeof options === 'object' && options.model 
-						? options.model 
-						: (typeof options === 'string' ? options : 'default model');
-					
-					console.log(`[App] Using model for code review: ${model}`); // Add this log
-					window.alert(`Selected model for Code Review: ${model}`);
-					await dispatch(runCodeReview({files, model})).unwrap();
-					
-					// Redux state'ini kullan
-					if (error) {
-							throw new Error(error);
+				// Get the selected AI model for code review
+				const selectedModel = aiModels[processId] || 'default';
+				console.log(`[App] Using AI model for code review: ${selectedModel}`);
+				
+				await dispatch(runCodeReview({files, model: selectedModel})).unwrap();
+				
+				if (error) {
+					throw new Error(error);
+				}
+				
+				setOutputs(prev => ({
+					...prev,
+					[processId]: {
+						content: reviews.join('\n\n'),
+						status: status === 'succeeded' ? 'completed' : 'error',
+						processType: 'Code Review',
+						processId,
+						timestamp: new Date().toISOString(),
+						model: selectedModel  // Include the model used in the output
 					}
-					
-					setOutputs(prev => ({
-							...prev,
-							[processId]: {
-									content: reviews.join('\n\n'),
-									status: status === 'succeeded' ? 'completed' : 'error',
-									processType: 'Code Review',
-									processId,
-									timestamp: new Date().toISOString()
-							}
-					}));
+				}));
 			} else if (processId === 'test-planning') {
 				console.log('[App] Running test planning');
 				const formData = new FormData();
@@ -613,7 +616,7 @@ function AppContents() {
 		try {
 			const response = await axios.post('/api/test-scenario-generation/run', {
 				prompt: generatedPrompt,
-				// diğer gerekli parametreler...
+
 			});
 			// Process Result alanını güncelle
 			setProcessResult(response.data.result);
@@ -635,6 +638,8 @@ function AppContents() {
 					onProcessSelect={handleProcessSelect}
 					processFiles={processFiles}
 					onFileUpload={handleFileUpload}
+					onAIModelUpdate={handleAIModelUpdate}
+					aiModels={aiModels}
 					processPrompts={processPrompts}
 					onPromptUpdate={handlePromptUpdate}
 					pipelineStatus={pipelineStatus}
@@ -650,7 +655,7 @@ function AppContents() {
 					onFileDelete={handleFileDelete}
 					selectedFileIds={selectedFileIds}
 					setSelectedFileIds={setSelectedFileIds}
-					onGeneratePrompt={handleGeneratePrompt}  // Add this line
+					onGeneratePrompt={handleGeneratePrompt}
 				/>
 			</main>
 		</div>

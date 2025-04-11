@@ -19,6 +19,8 @@ export default function TabPanel({
   onProcessSelect,
   processFiles,
   onFileUpload,
+  onAIModelUpdate,
+  aiModels,
   processPrompts,
   onPromptUpdate,
   pipelineStatus,
@@ -190,7 +192,9 @@ export default function TabPanel({
           <div className="bg-gray-50 rounded-lg p-4">
             {FormComponent ? (
               <FormComponent 
-                process={process} 
+                process={process}
+                onAIModelUpdate={onAIModelUpdate}
+                aiModels={aiModels}
                 onGeneratePrompt={async (formData) => {
                   try {
                     const response = await onGeneratePrompt(processId, formData);

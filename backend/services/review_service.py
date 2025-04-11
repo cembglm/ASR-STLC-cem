@@ -56,7 +56,7 @@ Code to review:
             
             # Model seçimi için LLMClient oluştur
             model_client = LLMClient()
-            self.logger.info(f"##### Model key: {model_key}")
+            self.logger.info(f"Model key: {model_key}")
             if model_key:
                 model_name = model_client.get_model_identifier(model_key)
                 model_client = LLMClient(model_name)

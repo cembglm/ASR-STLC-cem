@@ -61,27 +61,38 @@ class LLMClient:
     def __init__(self, model_name=None):
         self.api_url = "http://localhost:1234/v1"
         # Default model kullan veya parametre olarak verilen modeli al
-        self.model_name = model_name if model_name else "llama-3.2-3b-instruct"
+        self.model_name = model_name if model_name else "llama-3.2-1b-instruct"
         self.logger = logging.getLogger("LLMClient")
         self.logger.info(f"LLMClient initialized with model: {self.model_name}")
         
     def get_model_identifier(self, model_key):
         """Frontend'den gelen model anahtarına göre gerçek model identifier'ını döndürür"""
+        self.logger.info(f"Getting model identifier for key: {model_key}")
         if not model_key or not isinstance(model_key, str):
             self.logger.warning(f"Invalid model_key: {model_key}, using default model")
-            return "llama-3.2-3b-instruct"  # Default model
+            return "llama-3.2-1b-instruct"  # Default model
             
         model_mapping = {
-            "llama3.2": "llama-3.2-3b-instruct",
-            "gemma2": "gemma-2-2b-it",
-            "mistral": "mistral-7b-instruct-v0.2",
-            "codellama": "codellama-7b-instruct"
+        "codegeex4:9b": "codegeex4-all-9b",
+        "codellama:7b": "codellama-7b-instruct",
+        "deepseek-coder: 6.7B": "deepseek-coder-6.7b-instruct",
+        "gemma2:2b": "gemma-2-2b-it",
+        "gemma3:4b": "gemma-3-4b-it",
+        "llama3.2:3b": "llama-3.2-3b-instruct",
+        "mistral:7b": "mistral-7b-instruct-v0.3",
+        "qwen2.5:7b": "qwen2.5-7b-instruct-1m",
+        "qwen2.5-coder:3b": "qwen2.5-coder-3b-instruct",
+        "stable-code:3b": "stable-code-instruct-3b",
+        "starcoder2:7b": "starcoder2-7b"
         }
+
         
-        model_id = model_mapping.get(model_key.lower().strip(), None)
+        model_id = model_mapping.get(model_key, None)
+        self.logger.info(f"Model id: {model_id}")
+        self.logger.info(f"Model mapping: {model_mapping}")
         if not model_id:
             self.logger.warning(f"Unknown model_key: {model_key}, using default model")
-            return "llama-3.2-3b-instruct"  # Default model
+            return "llama-3.2-1b-instruct"  # Default model
             
         self.logger.info(f"Selected model: {model_key} -> {model_id}")
         return model_id

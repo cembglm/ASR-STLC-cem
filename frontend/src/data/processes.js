@@ -5,13 +5,16 @@ export const processes = [
     id: 'code-review',
     name: 'Code Review',
     details: [
-      'Automated code review using LLM',
-      'Best practices analysis',
-      'Security check'
+      'Performs automated code review using LLMs with support for multiple programming languages.',
+      'Evaluates code quality based on readability, maintainability, performance, and best practices.',
+      'Identifies bugs, anti-patterns, and refactoring opportunities with contextual justifications.',
+      'Provides educational feedback for developers with varying experience levels.',
+      'Suggests actionable improvements and alternative implementations where applicable.',
+      'Supports multiple programming languages and frameworks.',
     ],
     inputs: [],
     output: 'Code Review Report'
-  },
+  },  
   {
     id: 'requirement-analysis',
     name: 'Requirement Analysis',
